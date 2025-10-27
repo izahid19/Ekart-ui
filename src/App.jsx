@@ -18,6 +18,21 @@ import ProtectedRoute from './components/ProtectedRoute';
 import TermsAndCondition from './pages/TermsAndCondition';
 import Shipping from './pages/Shipping';
 import Cancelation from './pages/Cancelation';
+import ContactUs from './pages/ContactUs';
+import Stepper from './components/Stepper';
+import AddressForm from './pages/AddressForm';
+import OrderSuccess from './pages/OrderSuccess';
+import Dashboard from './pages/Dashboard';
+import AddProduct from './pages/Admin/AddProduct';
+import AdminProduct from './pages/Admin/AdminProduct';
+import AdminOrders from './pages/Admin/AdminOrders';
+import AdminSales from './pages/Admin/AdminSales';
+import AdminUsers from './pages/Admin/AdminUsers';
+import UserInfo from './pages/Admin/UserInfo';
+import ShowUserOrders from './pages/Admin/ShowUserOrders';
+import MyOrder from './pages/MyOrder';
+
+
 
 const router = createBrowserRouter([
   {
@@ -53,6 +68,14 @@ const router = createBrowserRouter([
     </>,
   },
   {
+    path: "/contact-us",
+    element: <>
+    <Navbar />
+    <ContactUs />
+    <Footer />
+    </>,
+  },
+  {
     path: "/products",
     element: <>
     <Navbar />
@@ -70,9 +93,11 @@ const router = createBrowserRouter([
   {
     path: "/profile/:userId",
     element: <>
+    <ProtectedRoute>
     <Navbar />
     <Profile />
     <Footer />
+    </ProtectedRoute>
     </>,
   },
   {
@@ -102,6 +127,56 @@ const router = createBrowserRouter([
   {
     path: "/verify-otp/:email",
     element: <VerifyOTP />,
+  },
+  {
+    path: "/checkout",
+    element: <ProtectedRoute><Navbar /><Stepper /></ProtectedRoute>
+  },
+  {
+    path: '/address',
+    element: <ProtectedRoute><AddressForm /></ProtectedRoute>
+  },
+  {
+    path: '/order-success',
+    element: <ProtectedRoute><OrderSuccess /></ProtectedRoute>
+  },
+  {
+    path: '/orders',
+    element: <ProtectedRoute><MyOrder /></ProtectedRoute>
+  },
+  {
+    path: '/dashboard',
+    element: <ProtectedRoute adminOnly={true}><Navbar /><Dashboard /></ProtectedRoute>,
+    children: [
+      {
+        path: "sales",
+        element: <><AdminSales/></>
+      },
+      {
+        path: "add-product",
+        element: <><AddProduct /></>
+      },
+      {
+        path: "products",
+        element: <><AdminProduct /></>
+      },
+      {
+        path: "orders",
+        element: <><AdminOrders /></>
+      },
+      {
+        path: "users/orders/:userId",
+        element: <><ShowUserOrders /></>
+      },
+      {
+        path: "users",
+        element: <><AdminUsers /></>
+      },
+      {
+        path: "users/:id",
+        element: <><UserInfo /></>
+      },   
+    ]
   },
 ]);
 

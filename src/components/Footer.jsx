@@ -43,6 +43,11 @@ const Footer = () => {
             <li>FAQs</li>
             <li>Order Tracking</li>
             <li>Size Guide</li>
+            <li>
+            <Link to="/contact-us">
+            Contact Us
+            </Link>
+            </li>
           </ul>
         </div>
         {/* social media links */}
