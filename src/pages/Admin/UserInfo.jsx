@@ -23,7 +23,6 @@ const UserInfo = () => {
     const userId = params.id
     const dispatch = useDispatch()
     const navigate = useNavigate()
-    console.log(userId);
 
     const handleChange = (e) => {
         setUpdateUser({ ...updateUser, [e.target.name]: e.target.value });
@@ -104,8 +103,6 @@ const UserInfo = () => {
     useEffect(() => {
         getUserDetails()
     }, [])
-
-    console.log(userDetails);
 
     // Wait until data is loaded
     if (!updateUser) {

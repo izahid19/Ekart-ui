@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import axios from 'axios'
-import { ArrowLeft, Loader2 } from 'lucide-react'
+import { ArrowLeft, MapPin } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { BASE_URL } from '@/utils/config'
@@ -9,22 +9,23 @@ import { BASE_URL } from '@/utils/config'
 const ShowUserOrders = () => {
   const params = useParams()
   const navigate = useNavigate()
-  const [userOrder, setUserOrder] = useState(null)
+  const [userOrder, setUserOrder] = useState([])
   const [loading, setLoading] = useState(true)
 
   const getUserOrders = async () => {
     const accessToken = localStorage.getItem('accessToken')
     try {
       const res = await axios.get(`${BASE_URL}/orders/user-order/${params.userId}`, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`
-        }
+        headers: { Authorization: `Bearer ${accessToken}` }
       })
       if (res.data.success) {
-        setUserOrder(res.data.orders)
+        const sortedOrders = res.data.orders.sort(
+          (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+        )
+        setUserOrder(sortedOrders)
       }
     } catch (error) {
-      console.log(error);
+      console.log(error)
     } finally {
       setLoading(false)
     }
@@ -34,26 +35,28 @@ const ShowUserOrders = () => {
     getUserOrders()
   }, [])
 
-  console.log(userOrder);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4 lg:pl-[350px]">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2 text-pink-600" />
-          <p className="text-gray-500">Loading orders...</p>
-        </div>
-      </div>
-    );
-  }
+  // ✨ Shimmer Loader Component
+  const ShimmerLoader = () => (
+    <div className="space-y-4 sm:space-y-6">
+      {[1, 2, 3].map((i) => (
+        <Card key={i} className="shadow-lg">
+          <CardContent className="p-4 sm:p-6 space-y-4">
+            <div className="h-4 bg-gray-200 rounded w-1/3 animate-pulse"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse"></div>
+            <div className="h-24 bg-gray-200 rounded animate-pulse"></div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  )
 
   return (
-    <div className='min-h-screen bg-gray-100 py-6 sm:py-10 px-4 sm:px-6 lg:pl-[350px] lg:pr-20'>
+    <div className="min-h-screen bg-gray-100 py-6 sm:py-10 px-4 sm:px-6 lg:pl-[350px] lg:pr-20">
       <div className="max-w-7xl mx-auto lg:mx-0">
-        {/* Header with Back Button */}
-        <div className='flex items-center gap-3 sm:gap-4 mb-6'>
-          <Button 
-            onClick={() => navigate(-1)} 
+        {/* Header */}
+        <div className="flex items-center gap-3 sm:gap-4 mb-6">
+          <Button
+            onClick={() => navigate(-1)}
             variant="outline"
             size="icon"
             className="flex-shrink-0"
@@ -63,22 +66,23 @@ const ShowUserOrders = () => {
           <h1 className="text-xl sm:text-2xl font-bold text-gray-800">User Orders</h1>
         </div>
 
-        {/* Orders Content */}
-        {userOrder?.length === 0 ? (
+        {/* Loading Shimmer */}
+        {loading ? (
+          <ShimmerLoader />
+        ) : userOrder.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
-              <p className="text-gray-500 text-base sm:text-lg">No orders found for this user.</p>
+              <p className="text-gray-500 text-base sm:text-lg">
+                No orders found for this user.
+              </p>
             </CardContent>
           </Card>
         ) : (
           <div className="space-y-4 sm:space-y-6">
-            {userOrder?.map((order) => (
-              <Card
-                key={order._id}
-                className="shadow-lg hover:shadow-xl transition"
-              >
+            {userOrder.map((order) => (
+              <Card key={order._id} className="shadow-lg hover:shadow-xl transition">
                 <CardContent className="p-4 sm:p-6">
-                  {/* Order Header */}
+                  {/* Header */}
                   <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-4 pb-4 border-b">
                     <div className="flex-1 min-w-0">
                       <h2 className="text-sm sm:text-base font-semibold mb-1">
@@ -98,8 +102,8 @@ const ShowUserOrders = () => {
                     </div>
                   </div>
 
-                  {/* User Info and Status */}
-                  <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4'>
+                  {/* User Info + Status */}
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
                     <div>
                       <p className="text-sm sm:text-base text-gray-700 mb-1">
                         <span className="font-medium">Customer:</span>{" "}
@@ -109,59 +113,80 @@ const ShowUserOrders = () => {
                         {order.user?.email || "N/A"}
                       </p>
                     </div>
-                    <span 
+                    <span
                       className={`${
-                        order.status === 'Paid' 
-                          ? 'bg-green-500' 
-                          : order.status === 'Failed' 
-                          ? 'bg-red-500' 
-                          : 'bg-orange-400'
+                        order.status === "Paid"
+                          ? "bg-green-500"
+                          : order.status === "Failed"
+                          ? "bg-red-500"
+                          : "bg-orange-400"
                       } text-white px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap self-start sm:self-auto`}
                     >
                       {order.status}
                     </span>
                   </div>
 
+                  {/* Address */}
+                  {order.address && (
+                    <div className="bg-gray-50 rounded-lg p-3 sm:p-4 mb-4 flex items-start gap-3">
+                      <MapPin className="text-pink-600 w-5 h-5 mt-1" />
+                      <div className="text-sm sm:text-base text-gray-700">
+                        <p className="font-medium mb-1">Shipping Address:</p>
+                        <p>{order.address.street}</p>
+                        <p>
+                          {order.address.city}, {order.address.state}{" "}
+                          {order.address.zipCode}
+                        </p>
+                        <p>{order.address.country}</p>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Products */}
                   <div>
-                    <h3 className="font-medium text-sm sm:text-base mb-3">Products:</h3>
+                    <h3 className="font-medium text-sm sm:text-base mb-3">
+                      Products:
+                    </h3>
                     <div className="space-y-3">
                       {order.products.map((product, index) => (
                         <div
                           key={index}
                           className="flex flex-col sm:flex-row sm:items-center gap-3 bg-gray-50 p-3 sm:p-4 rounded-lg"
                         >
-                          {/* Product Image */}
-                          <img 
-                            onClick={() => navigate(`/products/${product?.productId?._id}`)} 
-                            src={product.productId?.productImg?.[0].url} 
+                          <img
+                            onClick={() =>
+                              navigate(`/products/${product?.productId?._id}`)
+                            }
+                            src={product.productId?.productImg?.[0].url}
                             alt={product.productId?.productName}
-                            className='w-16 h-16 sm:w-20 sm:h-20 object-cover rounded cursor-pointer hover:opacity-80 transition flex-shrink-0' 
+                            className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded cursor-pointer hover:opacity-80 transition flex-shrink-0"
                           />
-                          
-                          {/* Product Details - Mobile */}
                           <div className="flex-1 sm:hidden">
-                            <p className='text-sm font-medium line-clamp-2 mb-2'>
+                            <p className="text-sm font-medium line-clamp-2 mb-2">
                               {product.productId?.productName}
                             </p>
                             <p className="text-xs text-gray-500 font-mono mb-2 break-all">
                               ID: {product?.productId?._id}
                             </p>
                             <p className="text-sm font-semibold text-pink-600">
-                              ₹{product.productId?.productPrice.toLocaleString('en-IN')} × {product.quantity}
+                              ₹{product.productId?.productPrice.toLocaleString(
+                                "en-IN"
+                              )}{" "}
+                              × {product.quantity}
                             </p>
                           </div>
-
-                          {/* Product Details - Desktop */}
                           <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between sm:gap-4">
-                            <p className='flex-1 text-sm font-medium line-clamp-2'>
+                            <p className="flex-1 text-sm font-medium line-clamp-2">
                               {product.productId?.productName}
                             </p>
                             <p className="text-xs text-gray-500 font-mono w-48 truncate">
                               {product?.productId?._id}
                             </p>
                             <p className="text-sm font-semibold whitespace-nowrap">
-                              ₹{product.productId?.productPrice.toLocaleString('en-IN')} × {product.quantity}
+                              ₹{product.productId?.productPrice.toLocaleString(
+                                "en-IN"
+                              )}{" "}
+                              × {product.quantity}
                             </p>
                           </div>
                         </div>
