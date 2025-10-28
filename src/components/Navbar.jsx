@@ -31,21 +31,57 @@ const Navbar = () => {
   const admin = user && user.role === "admin";
   const API = `${BASE_URL}/cart`;
 
+  const loadCart = async () => {
+    try {
+      if (accessToken) {
+        const res = await axios.get(API, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+
+        if (res.data.success) {
+          const guestCart = JSON.parse(localStorage.getItem("guestCart")) || [];
+
+          if (guestCart.length > 0) {
+            for (const item of guestCart) {
+              await axios.post(
+                `${BASE_URL}/cart/add`,
+                { productId: item.productId, quantity: item.quantity },
+                { headers: { Authorization: `Bearer ${accessToken}` } }
+              );
+            }
+            localStorage.removeItem("guestCart");
+          }
+
+          const updated = await axios.get(API, {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          });
+          dispatch(setCart(updated.data.cart));
+        }
+      } else {
+        const guestCart = JSON.parse(localStorage.getItem("guestCart")) || [];
+        dispatch(setCart({ items: guestCart }));
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  useEffect(() => {
+    loadCart();
+  }, [dispatch, accessToken]);
+
   const handleLogout = async () => {
     try {
       const response = await axios.post(
         `${BASE_URL}/user/logout`,
         {},
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
+        { headers: { Authorization: `Bearer ${accessToken}` } }
       );
       if (response.data.success) {
         dispatch(setUser(null));
+        localStorage.removeItem("accessToken");
         toast.success(response.data.message);
-        navigate("/login");
+        navigate("/");
       }
     } catch (error) {
       console.error("Logout error:", error);
@@ -55,43 +91,21 @@ const Navbar = () => {
     }
   };
 
-  const openLogoutModal = () => {
-    setShowLogoutModal(true);
-  };
-
-  const loadCart = async () => {
-    try {
-      const res = await axios.get(API, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-      if (res.data.success) {
-        dispatch(setCart(res.data.cart));
-      }
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
-  useEffect(() => {
-    loadCart();
-  }, [dispatch]);
-
   return (
     <>
       <header className="bg-pink-50 fixed w-full z-20 border-b border-pink-200 shadow-sm">
         <div className="max-w-7xl mx-auto flex items-center justify-between py-3 px-4 sm:px-6 lg:px-8">
-          {/* Logo → now clickable */}
+          {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
             <img
               src="/Ekart.png"
               alt="Ekart"
-              className="w-[90px] sm:w-[110px] cursor-pointer"
+              className="w-[90px] sm:w-[110px]"
             />
           </Link>
 
-          {/* Cart + Menu button (Mobile) */}
+          {/* Mobile Icons */}
           <div className="flex items-center gap-4 md:hidden">
-            {/* Cart always visible */}
             <Link to="/cart" className="relative">
               <ShoppingCart className="w-6 h-6" />
               <span className="bg-pink-500 rounded-full absolute text-white -top-2 -right-3 px-1.5 text-xs font-semibold">
@@ -99,16 +113,16 @@ const Navbar = () => {
               </span>
             </Link>
 
-            {/* Hamburger toggle */}
-            <button
-              className="p-2 rounded-md hover:bg-pink-100 transition"
-              onClick={() => setMenuOpen(!menuOpen)}
-            >
-              {menuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            <button onClick={() => setMenuOpen(!menuOpen)}>
+              {menuOpen ? (
+                <X className="w-6 h-6" />
+              ) : (
+                <Menu className="w-6 h-6" />
+              )}
             </button>
           </div>
 
-          {/* Desktop Navigation */}
+          {/* Desktop Nav */}
           <nav className="hidden md:flex gap-10 justify-between items-center">
             <ul className="flex gap-7 items-center text-[17px] font-semibold">
               <Link to="/products">
@@ -137,14 +151,14 @@ const Navbar = () => {
               </Link>
               {user ? (
                 <Button
-                  onClick={openLogoutModal}
-                  className="bg-pink-600 text-white hover:bg-pink-700"
+                  onClick={() => setShowLogoutModal(true)}
+                  className="bg-pink-600"
                 >
                   Logout
                 </Button>
               ) : (
                 <Link to="/login">
-                  <Button className="bg-gradient-to-tl from-blue-500 to-purple-600 text-white hover:opacity-90">
+                  <Button className="bg-gradient-to-tl from-blue-500 to-purple-600 text-white">
                     Login
                   </Button>
                 </Link>
@@ -153,10 +167,10 @@ const Navbar = () => {
           </nav>
         </div>
 
-        {/* Mobile Menu */}
+        {/* ✅ Mobile Dropdown Menu */}
         {menuOpen && (
-          <div className="md:hidden bg-pink-50 border-t border-pink-200 animate-fade-in">
-            <ul className="flex flex-col items-start gap-4 px-6 py-4 text-lg font-semibold">
+          <div className="md:hidden bg-white border-t border-pink-200 shadow-md">
+            <ul className="flex flex-col p-4 space-y-4 font-semibold text-gray-800">
               <Link to="/products" onClick={() => setMenuOpen(false)}>
                 <li className="hover:text-pink-600 transition">Products</li>
               </Link>
@@ -171,46 +185,55 @@ const Navbar = () => {
                 </Link>
               )}
               {admin && (
-                <Link to="/dashboard/sales" onClick={() => setMenuOpen(false)}>
-                  <li className="hover:text-pink-600 transition">Dashboard</li>
-                </Link>
-              )}
-              {user ? (
-                <Button
-                  onClick={openLogoutModal}
-                  className="bg-pink-600 text-white w-full"
+                <Link
+                  to="/dashboard/sales"
+                  onClick={() => setMenuOpen(false)}
                 >
-                  Logout
-                </Button>
-              ) : (
-                <Link to="/login" onClick={() => setMenuOpen(false)}>
-                  <Button className="bg-gradient-to-tl from-blue-500 to-purple-600 text-white w-full">
-                    Login
-                  </Button>
+                  <li className="hover:text-pink-600 transition">
+                    Dashboard
+                  </li>
                 </Link>
               )}
+
+              <div className="flex items-center gap-3 pt-2 border-t border-gray-200">
+                {user ? (
+                  <Button
+                    onClick={() => setShowLogoutModal(true)}
+                    className="bg-pink-600 w-full"
+                  >
+                    Logout
+                  </Button>
+                ) : (
+                  <Link
+                    to="/login"
+                    onClick={() => setMenuOpen(false)}
+                    className="w-full"
+                  >
+                    <Button className="bg-gradient-to-tl from-blue-500 to-purple-600 text-white w-full">
+                      Login
+                    </Button>
+                  </Link>
+                )}
+              </div>
             </ul>
           </div>
         )}
       </header>
 
-      {/* Logout Confirmation Modal */}
+      {/* Logout Modal */}
       <AlertDialog open={showLogoutModal} onOpenChange={setShowLogoutModal}>
-        <AlertDialogContent className="max-w-[90vw] sm:max-w-md">
+        <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Confirm Logout</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to logout? You'll need to sign in again to access your account.
+              Are you sure you want to logout?
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="flex-col-reverse sm:flex-row gap-2">
-            <AlertDialogAction
-              onClick={handleLogout}
-              className="bg-pink-600 hover:bg-pink-700"
-            >
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={handleLogout}>
               Yes, Logout
             </AlertDialogAction>
-            <AlertDialogCancel className="mt-0">Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
