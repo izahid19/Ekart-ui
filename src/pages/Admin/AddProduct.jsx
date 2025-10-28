@@ -58,7 +58,7 @@ const AddProduct = () => {
         }
 
         productData.productImg.forEach((img) => {
-            formData.append("files", img); 
+            formData.append("file", img); 
         });
 
         
