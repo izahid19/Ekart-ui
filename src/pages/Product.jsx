@@ -7,7 +7,6 @@ import FilterSidebar from "@/components/FilterSidebar";
 import MobileFilter from "@/components/MobileFilter";
 import ProductCard from "@/components/ProductCard";
 import { Button } from "@/components/ui/button";
-
 import {
   Select,
   SelectContent,
@@ -91,8 +90,7 @@ const Product = () => {
     }
 
     filtered = filtered.filter(
-      (p) =>
-        p.productPrice >= priceRange[0] && p.productPrice <= priceRange[1]
+      (p) => p.productPrice >= priceRange[0] && p.productPrice <= priceRange[1]
     );
 
     if (sortOrder === "lowToHigh") {
@@ -105,7 +103,7 @@ const Product = () => {
   }, [search, category, brand, sortOrder, priceRange, allProducts, dispatch]);
 
   return (
-    <div className="pt-20 pb-20 px-3 sm:px-6 md:px-8 flex flex-col min-h-screen">
+    <div className="pt-20 pb-20 px-3 sm:px-6 md:px-8 xl:px-16 flex flex-col min-h-screen bg-gray-50">
       {/* ✅ Mobile Filter Button */}
       <div className="flex justify-between items-center mb-4 md:hidden">
         <Button
@@ -131,7 +129,7 @@ const Product = () => {
       {/* ✅ Main Layout */}
       <div className="flex flex-col md:flex-row gap-6 flex-grow">
         {/* Desktop Sidebar */}
-        <div className="w-full md:w-1/4">
+        <div className="w-full md:w-[25%] lg:w-[20%] xl:w-[20%] flex-shrink-0">
           <FilterSidebar
             search={search}
             setSearch={setSearch}
@@ -146,7 +144,7 @@ const Product = () => {
         </div>
 
         {/* Product Section */}
-        <div className="flex flex-col flex-1">
+        <div className="flex flex-col flex-1 overflow-hidden">
           {/* Sort Section (Desktop Only) */}
           <div className="hidden md:flex justify-end mb-4">
             <Select onValueChange={(value) => setSortOrder(value)}>
@@ -161,12 +159,13 @@ const Product = () => {
           </div>
 
           {/* Product Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5 sm:gap-6">
+          <div
+            className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-5 lg:gap-6 justify-items-center">
             {loading
               ? Array.from({ length: 10 }).map((_, index) => (
                   <div
                     key={index}
-                    className="animate-pulse shadow rounded-lg overflow-hidden bg-white"
+                    className="animate-pulse shadow rounded-lg overflow-hidden bg-white w-full max-w-[240px]"
                   >
                     <div className="w-full aspect-square bg-gray-200" />
                     <div className="px-3 py-2 space-y-2">
@@ -178,7 +177,11 @@ const Product = () => {
                 ))
               : products.length > 0
               ? products.map((product, index) => (
-                  <ProductCard key={index} product={product} loading={loading} />
+                  <ProductCard
+                    key={index}
+                    product={product}
+                    loading={loading}
+                  />
                 ))
               : !loading && (
                   <p className="text-center col-span-full text-gray-500">

@@ -158,7 +158,7 @@ const AdminOrders = () => {
                       <p>{selectedOrder.shippingAddress.fullName}</p>
                       <p>{selectedOrder.shippingAddress.phone}</p>
                       <p>
-                        {selectedOrder.shippingAddress.street},{" "}
+                        {selectedOrder.shippingAddress.address},{" "}
                         {selectedOrder.shippingAddress.city},{" "}
                         {selectedOrder.shippingAddress.state} -{" "}
                         {selectedOrder.shippingAddress.postalCode}
