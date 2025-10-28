@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Eye, EyeOff } from "lucide-react";
+import { Loader2, Eye, EyeOff, Clock } from "lucide-react";
 import axios from "axios";
 import { BASE_URL } from "@/utils/config";
 import { toast } from "sonner";
@@ -39,6 +39,8 @@ const VerifyOTP = () => {
   const [otpError, setOtpError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [resending, setResending] = useState(false);
+  const [cooldownTime, setCooldownTime] = useState(0); // in seconds
+  const [isDisabled, setIsDisabled] = useState(false);
 
   const [formData, setFormData] = useState({
     newPassword: "",
@@ -47,6 +49,31 @@ const VerifyOTP = () => {
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Countdown timer effect
+  useEffect(() => {
+    let timer;
+    if (cooldownTime > 0) {
+      setIsDisabled(true);
+      timer = setInterval(() => {
+        setCooldownTime((prev) => {
+          if (prev <= 1) {
+            setIsDisabled(false);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [cooldownTime]);
+
+  // Format time as MM:SS
+  const formatTime = (seconds) => {
+    const minutes = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${minutes}:${secs.toString().padStart(2, '0')}`;
+  };
 
   // ✅ Step 1: Verify OTP
   const handleVerifyOTP = async (e) => {
@@ -78,8 +105,12 @@ const VerifyOTP = () => {
     try {
       setResending(true);
       const res = await axios.post(`${BASE_URL}/user/resend-otp/${email}`);
-      if (res.data.success) toast.success("New OTP sent to your email!");
-      else toast.error(res.data.message || "Failed to resend OTP!");
+      if (res.data.success) {
+        toast.success("New OTP sent to your email!");
+        setCooldownTime(180); // 3 minutes = 180 seconds
+      } else {
+        toast.error(res.data.message || "Failed to resend OTP!");
+      }
     } catch (error) {
       toast.error(error.response?.data?.message || "Something went wrong!");
     } finally {
@@ -118,15 +149,15 @@ const VerifyOTP = () => {
   };
 
   return (
-    <div className="flex justify-center items-center min-h-screen bg-pink-100">
+    <div className="flex justify-center items-center min-h-screen bg-pink-100 p-4">
       <Card className="w-full max-w-sm shadow-lg">
         {step === 1 ? (
           <>
             <CardHeader>
-              <CardTitle>Verify OTP</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-xl sm:text-2xl">Verify OTP</CardTitle>
+              <CardDescription className="text-sm">
                 Enter the 6-digit OTP sent to{" "}
-                <span className="font-semibold">{email}</span>.
+                <span className="font-semibold break-all">{email}</span>.
               </CardDescription>
             </CardHeader>
 
@@ -145,7 +176,7 @@ const VerifyOTP = () => {
                   {otpError && <p className="text-red-500 text-sm">{otpError}</p>}
                 </div>
 
-                <CardFooter className="flex flex-col gap-3 mt-2">
+                <CardFooter className="flex flex-col gap-3 p-0 pt-4">
                   <Button
                     type="submit"
                     disabled={isLoading}
@@ -164,10 +195,22 @@ const VerifyOTP = () => {
                   <button
                     type="button"
                     onClick={handleResendOTP}
-                    disabled={resending}
-                    className="text-sm text-blue-600 hover:underline mt-2 disabled:opacity-60"
+                    disabled={resending || isDisabled}
+                    className="text-sm text-blue-600 hover:underline disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
-                    {resending ? "Resending OTP..." : "Didn’t receive OTP? Resend"}
+                    {resending ? (
+                      <>
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        Resending OTP...
+                      </>
+                    ) : isDisabled ? (
+                      <>
+                        <Clock className="h-3 w-3" />
+                        Resend after {formatTime(cooldownTime)}
+                      </>
+                    ) : (
+                      "Didn't receive OTP? Resend"
+                    )}
                   </button>
                 </CardFooter>
               </form>
@@ -176,10 +219,10 @@ const VerifyOTP = () => {
         ) : (
           <>
             <CardHeader>
-              <CardTitle>Set New Password</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-xl sm:text-2xl">Set New Password</CardTitle>
+              <CardDescription className="text-sm">
                 Create a strong password for{" "}
-                <span className="font-semibold">{email}</span>.
+                <span className="font-semibold break-all">{email}</span>.
               </CardDescription>
             </CardHeader>
 
@@ -202,12 +245,12 @@ const VerifyOTP = () => {
                     {showPassword ? (
                       <EyeOff
                         onClick={() => setShowPassword(false)}
-                        className="absolute top-1/2 right-3 -translate-y-1/2 cursor-pointer"
+                        className="absolute top-1/2 right-3 -translate-y-1/2 cursor-pointer w-5 h-5 text-gray-500"
                       />
                     ) : (
                       <Eye
                         onClick={() => setShowPassword(true)}
-                        className="absolute top-1/2 right-3 -translate-y-1/2 cursor-pointer"
+                        className="absolute top-1/2 right-3 -translate-y-1/2 cursor-pointer w-5 h-5 text-gray-500"
                       />
                     )}
                   </div>
@@ -236,12 +279,12 @@ const VerifyOTP = () => {
                     {showConfirmPassword ? (
                       <EyeOff
                         onClick={() => setShowConfirmPassword(false)}
-                        className="absolute top-1/2 right-3 -translate-y-1/2 cursor-pointer"
+                        className="absolute top-1/2 right-3 -translate-y-1/2 cursor-pointer w-5 h-5 text-gray-500"
                       />
                     ) : (
                       <Eye
                         onClick={() => setShowConfirmPassword(true)}
-                        className="absolute top-1/2 right-3 -translate-y-1/2 cursor-pointer"
+                        className="absolute top-1/2 right-3 -translate-y-1/2 cursor-pointer w-5 h-5 text-gray-500"
                       />
                     )}
                   </div>
@@ -250,7 +293,7 @@ const VerifyOTP = () => {
                   )}
                 </div>
 
-                <CardFooter className="flex flex-col gap-3 mt-2">
+                <CardFooter className="flex flex-col gap-3 p-0 pt-4">
                   <Button
                     type="submit"
                     disabled={isLoading}
