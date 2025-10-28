@@ -32,10 +32,12 @@ const AddressForm = () => {
     (store) => store.product
   );
   const [showForm, setShowForm] = useState(addresses.length > 0 ? false : true);
+  const [loadingPayment, setLoadingPayment] = useState(false); // ✅ shimmer loader
+
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const subtotal = cart?.totalPrice;
+  const subtotal = cart?.totalPrice || 0;
   const shipping = subtotal > 50 ? 0 : 10;
   const tax = parseFloat((subtotal * 0.05).toFixed(2));
   const total = subtotal + shipping + tax;
@@ -69,7 +71,14 @@ const AddressForm = () => {
   const accessToken = localStorage.getItem("accessToken");
 
   const handlePayment = async () => {
+    if (selectedAddress === null || !addresses[selectedAddress]) {
+      return toast.error("Please select or add a shipping address");
+    }
+
+    setLoadingPayment(true);
     try {
+      const shippingAddress = addresses[selectedAddress];
+
       const orderPayload = {
         products: cart?.items?.map((item) => ({
           productId: item.productId._id,
@@ -79,17 +88,20 @@ const AddressForm = () => {
         shipping,
         amount: total,
         currency: "INR",
+        shippingAddress, // ✅ FIXED missing shipping address
       };
 
       const { data } = await axios.post(
         BASE_URL + "/orders/create-order",
         orderPayload,
-        {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }
+        { headers: { Authorization: `Bearer ${accessToken}` } }
       );
 
-      if (!data.success) return toast.error("Something went wrong creating order");
+      if (!data.success) {
+        toast.error("Something went wrong creating order");
+        setLoadingPayment(false);
+        return;
+      }
 
       const { order } = data;
 
@@ -105,9 +117,7 @@ const AddressForm = () => {
             const verifyRes = await axios.post(
               BASE_URL + "/orders/verify-payment",
               response,
-              {
-                headers: { Authorization: `Bearer ${accessToken}` },
-              }
+              { headers: { Authorization: `Bearer ${accessToken}` } }
             );
 
             if (verifyRes.data.success) {
@@ -120,22 +130,9 @@ const AddressForm = () => {
           } catch (error) {
             console.error(error);
             toast.error("Error verifying payment");
+          } finally {
+            setLoadingPayment(false);
           }
-        },
-        modal: {
-          ondismiss: async function () {
-            await axios.post(
-              BASE_URL + "/orders/verify-payment",
-              {
-                razorpay_order_id: order.id,
-                paymentFailed: true,
-              },
-              {
-                headers: { Authorization: `Bearer ${accessToken}` },
-              }
-            );
-            toast.error("Payment cancelled or failed");
-          },
         },
         prefill: {
           name: formData.fullName,
@@ -143,28 +140,20 @@ const AddressForm = () => {
           contact: formData.phone,
         },
         theme: { color: "#F472B6" },
+        modal: {
+          ondismiss: () => {
+            setLoadingPayment(false);
+            toast.error("Payment cancelled or failed");
+          },
+        },
       };
 
       const rzp = new window.Razorpay(options);
-
-      rzp.on("payment.failed", async function () {
-        await axios.post(
-          BASE_URL + "/orders/verify-payment",
-          {
-            razorpay_order_id: order.id,
-            paymentFailed: true,
-          },
-          {
-            headers: { Authorization: `Bearer ${accessToken}` },
-          }
-        );
-        toast.error("Payment Failed. Please try again.");
-      });
-
       rzp.open();
     } catch (error) {
       console.error(error);
       toast.error("Something went wrong while processing payment");
+      setLoadingPayment(false);
     }
   };
 
@@ -189,144 +178,47 @@ const AddressForm = () => {
                 {showForm ? (
                   <>
                     <div className="space-y-4">
-                      <div>
-                        <Label htmlFor="fullName" className="text-sm">
-                          Full Name
-                        </Label>
-                        <Input
-                          id="fullName"
-                          name="fullName"
-                          type="text"
-                          required
-                          placeholder="John Doe"
-                          value={formData.fullName}
-                          onChange={handleChange}
-                          className="mt-1"
-                        />
-                      </div>
-
-                      <div>
-                        <Label htmlFor="phone" className="text-sm">
-                          Phone Number
-                        </Label>
-                        <Input
-                          id="phone"
-                          name="phone"
-                          type="tel"
-                          inputMode="numeric"
-                          pattern="[0-9]*"
-                          required
-                          placeholder="+91 9876543210"
-                          value={formData.phone}
-                          onChange={(e) => {
-                            const value = e.target.value.replace(/\D/g, "");
-                            if (value.length <= 10)
-                              setFormData({ ...formData, phone: value });
-                          }}
-                          className="mt-1"
-                        />
-                      </div>
-
-                      <div>
-                        <Label htmlFor="email" className="text-sm">
-                          Email
-                        </Label>
-                        <Input
-                          id="email"
-                          name="email"
-                          type="email"
-                          required
-                          placeholder="john@example.com"
-                          value={formData.email}
-                          onChange={handleChange}
-                          className="mt-1"
-                        />
-                      </div>
-
-                      <div>
-                        <Label htmlFor="address" className="text-sm">
-                          Address
-                        </Label>
-                        <Input
-                          id="address"
-                          name="address"
-                          type="text"
-                          required
-                          placeholder="123 Street, Area"
-                          value={formData.address}
-                          onChange={handleChange}
-                          className="mt-1"
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="city" className="text-sm">
-                            City
-                          </Label>
+                      {/* Form Inputs */}
+                      {[
+                        { id: "fullName", label: "Full Name", type: "text", placeholder: "John Doe" },
+                        { id: "phone", label: "Phone Number", type: "tel", placeholder: "+91 9876543210" },
+                        { id: "email", label: "Email", type: "email", placeholder: "john@example.com" },
+                        { id: "address", label: "Address", type: "text", placeholder: "123 Street, Area" },
+                      ].map(({ id, label, type, placeholder }) => (
+                        <div key={id}>
+                          <Label htmlFor={id} className="text-sm">{label}</Label>
                           <Input
-                            id="city"
-                            name="city"
-                            type="text"
+                            id={id}
+                            name={id}
+                            type={type}
+                            placeholder={placeholder}
                             required
-                            placeholder="Kolkata"
-                            value={formData.city}
+                            value={formData[id]}
                             onChange={handleChange}
                             className="mt-1"
                           />
                         </div>
+                      ))}
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                          <Label htmlFor="state" className="text-sm">
-                            State
-                          </Label>
-                          <Input
-                            id="state"
-                            name="state"
-                            type="text"
-                            required
-                            placeholder="West Bengal"
-                            value={formData.state}
-                            onChange={handleChange}
-                            className="mt-1"
-                          />
+                          <Label htmlFor="city" className="text-sm">City</Label>
+                          <Input id="city" name="city" type="text" placeholder="Kolkata" value={formData.city} onChange={handleChange} className="mt-1" />
+                        </div>
+                        <div>
+                          <Label htmlFor="state" className="text-sm">State</Label>
+                          <Input id="state" name="state" type="text" placeholder="West Bengal" value={formData.state} onChange={handleChange} className="mt-1" />
                         </div>
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                          <Label htmlFor="zip" className="text-sm">
-                            Zip Code
-                          </Label>
-                          <Input
-                            id="zip"
-                            name="zip"
-                            type="number"
-                            inputMode="numeric"
-                            required
-                            placeholder="700001"
-                            value={formData.zip}
-                            onChange={(e) => {
-                              const value = e.target.value.replace(/\D/g, "");
-                              if (value.length <= 6)
-                                setFormData({ ...formData, zip: value });
-                            }}
-                            className="mt-1"
-                          />
+                          <Label htmlFor="zip" className="text-sm">Zip Code</Label>
+                          <Input id="zip" name="zip" type="number" placeholder="700001" value={formData.zip} onChange={handleChange} className="mt-1" />
                         </div>
                         <div>
-                          <Label htmlFor="country" className="text-sm">
-                            Country
-                          </Label>
-                          <Input
-                            id="country"
-                            name="country"
-                            type="text"
-                            required
-                            placeholder="India"
-                            value={formData.country}
-                            onChange={handleChange}
-                            className="mt-1"
-                          />
+                          <Label htmlFor="country" className="text-sm">Country</Label>
+                          <Input id="country" name="country" type="text" placeholder="India" value={formData.country} onChange={handleChange} className="mt-1" />
                         </div>
                       </div>
                     </div>
@@ -337,9 +229,7 @@ const AddressForm = () => {
                   </>
                 ) : (
                   <div className="space-y-4">
-                    <h2 className="text-base sm:text-lg font-semibold lg:hidden">
-                      Saved Addresses
-                    </h2>
+                    <h2 className="text-base sm:text-lg font-semibold lg:hidden">Saved Addresses</h2>
                     {addresses.map((addr, index) => (
                       <div
                         key={index}
@@ -360,10 +250,8 @@ const AddressForm = () => {
                           {addr.email}
                         </p>
                         <p className="text-xs sm:text-sm text-gray-600 mt-2">
-                          {addr.address}, {addr.city}, {addr.state}, {addr.zip},{" "}
-                          {addr.country}
+                          {addr.address}, {addr.city}, {addr.state}, {addr.zip}, {addr.country}
                         </p>
-
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -384,13 +272,18 @@ const AddressForm = () => {
                       + Add New Address
                     </Button>
 
-                    <Button
-                      disabled={selectedAddress === null}
-                      onClick={handlePayment}
-                      className="w-full bg-pink-600 hover:bg-pink-700 disabled:opacity-50"
-                    >
-                      Proceed To Checkout
-                    </Button>
+                    {/* ✅ shimmer loader button */}
+                    {loadingPayment ? (
+                      <div className="w-full h-10 bg-gray-200 rounded-md animate-pulse" />
+                    ) : (
+                      <Button
+                        disabled={selectedAddress === null}
+                        onClick={handlePayment}
+                        className="w-full bg-pink-600 hover:bg-pink-700 disabled:opacity-50"
+                      >
+                        Proceed To Checkout
+                      </Button>
+                    )}
                   </div>
                 )}
               </CardContent>
@@ -404,34 +297,45 @@ const AddressForm = () => {
                 <CardTitle className="text-lg sm:text-xl">Order Summary</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4 p-4 sm:p-6">
-                <div className="flex justify-between text-sm sm:text-base">
-                  <span>Subtotal ({cart?.items?.length || 0} items)</span>
-                  <span className="font-medium">
-                    ₹{subtotal?.toLocaleString("en-IN")}
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm sm:text-base">
-                  <span>Shipping</span>
-                  <span className="font-medium">
-                    ₹{shipping.toLocaleString("en-IN")}
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm sm:text-base">
-                  <span>Tax (5%)</span>
-                  <span className="font-medium">
-                    ₹{tax.toLocaleString("en-IN")}
-                  </span>
-                </div>
-                <Separator />
-                <div className="flex justify-between font-bold text-base sm:text-lg">
-                  <span>Total</span>
-                  <span>₹{total.toLocaleString("en-IN")}</span>
-                </div>
-                <div className="text-xs sm:text-sm text-muted-foreground pt-4 space-y-1">
-                  <p>• Free shipping on orders over ₹50</p>
-                  <p>• 30-day return policy</p>
-                  <p>• Secure checkout with SSL encryption</p>
-                </div>
+                {!cart?.items?.length ? (
+                  <div className="space-y-3">
+                    <div className="h-5 w-3/4 bg-gray-200 rounded animate-pulse"></div>
+                    <div className="h-5 w-1/2 bg-gray-200 rounded animate-pulse"></div>
+                    <div className="h-5 w-full bg-gray-200 rounded animate-pulse"></div>
+                    <div className="h-6 w-2/3 bg-gray-200 rounded animate-pulse"></div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex justify-between text-sm sm:text-base">
+                      <span>Subtotal ({cart?.items?.length || 0} items)</span>
+                      <span className="font-medium">
+                        ₹{subtotal?.toLocaleString("en-IN")}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm sm:text-base">
+                      <span>Shipping</span>
+                      <span className="font-medium">
+                        ₹{shipping.toLocaleString("en-IN")}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm sm:text-base">
+                      <span>Tax (5%)</span>
+                      <span className="font-medium">
+                        ₹{tax.toLocaleString("en-IN")}
+                      </span>
+                    </div>
+                    <Separator />
+                    <div className="flex justify-between font-bold text-base sm:text-lg">
+                      <span>Total</span>
+                      <span>₹{total.toLocaleString("en-IN")}</span>
+                    </div>
+                    <div className="text-xs sm:text-sm text-muted-foreground pt-4 space-y-1">
+                      <p>• Free shipping on orders over ₹50</p>
+                      <p>• 30-day return policy</p>
+                      <p>• Secure checkout with SSL encryption</p>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           </div>

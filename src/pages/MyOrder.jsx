@@ -121,7 +121,7 @@ const MyOrder = () => {
                       <MapPin className="h-4 w-4 mt-1 text-pink-600" />
                       <div>
                         <p className="font-medium">{order.shippingAddress.fullName}</p>
-                        <p>{order.shippingAddress.street}</p>
+                        <p>{order.shippingAddress.address}</p>
                         <p>
                           {order.shippingAddress.city}, {order.shippingAddress.state} -{" "}
                           {order.shippingAddress.postalCode}
