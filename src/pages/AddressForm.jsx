@@ -6,7 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { addAddress, deleteAddress, setCart, setSelectedAddress } from "@/redux/productSlice";
+import {
+  addAddress,
+  deleteAddress,
+  setCart,
+  setSelectedAddress,
+} from "@/redux/productSlice";
 import axios from "axios";
 import { toast } from "sonner";
 import { BASE_URL } from "@/utils/config";
@@ -23,14 +28,16 @@ const AddressForm = () => {
     country: "",
   });
 
-  const { cart, addresses, selectedAddress } = useSelector((store) => store.product);
+  const { cart, addresses, selectedAddress } = useSelector(
+    (store) => store.product
+  );
   const [showForm, setShowForm] = useState(addresses.length > 0 ? false : true);
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const subtotal = cart?.totalPrice
+  const subtotal = cart?.totalPrice;
   const shipping = subtotal > 50 ? 0 : 10;
-  const tax = parseFloat((subtotal * 0.05).toFixed(2))
+  const tax = parseFloat((subtotal * 0.05).toFixed(2));
   const total = subtotal + shipping + tax;
 
   const handleChange = (e) => {
@@ -52,8 +59,6 @@ const AddressForm = () => {
     setShowForm(false);
   };
 
-  console.log('cart', cart);
-
   useEffect(() => {
     const script = document.createElement("script");
     script.src = "https://checkout.razorpay.com/v1/checkout.js";
@@ -61,12 +66,12 @@ const AddressForm = () => {
     document.body.appendChild(script);
   }, []);
 
-  const accessToken = localStorage.getItem("accessToken")
+  const accessToken = localStorage.getItem("accessToken");
 
   const handlePayment = async () => {
     try {
       const orderPayload = {
-        products: cart?.items?.map(item => ({
+        products: cart?.items?.map((item) => ({
           productId: item.productId._id,
           quantity: item.quantity,
         })),
@@ -76,9 +81,13 @@ const AddressForm = () => {
         currency: "INR",
       };
 
-      const { data } = await axios.post(BASE_URL + "/orders/create-order", orderPayload, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
+      const { data } = await axios.post(
+        BASE_URL + "/orders/create-order",
+        orderPayload,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
 
       if (!data.success) return toast.error("Something went wrong creating order");
 
@@ -93,9 +102,13 @@ const AddressForm = () => {
         order_id: order.id,
         handler: async function (response) {
           try {
-            const verifyRes = await axios.post(BASE_URL + "/orders/verify-payment", response, {
-              headers: { Authorization: `Bearer ${accessToken}` },
-            });
+            const verifyRes = await axios.post(
+              BASE_URL + "/orders/verify-payment",
+              response,
+              {
+                headers: { Authorization: `Bearer ${accessToken}` },
+              }
+            );
 
             if (verifyRes.data.success) {
               toast.success("✅ Payment Successful!");
@@ -111,12 +124,16 @@ const AddressForm = () => {
         },
         modal: {
           ondismiss: async function () {
-            await axios.post(BASE_URL + "/orders/verify-payment", {
-              razorpay_order_id: order.id,
-              paymentFailed: true,
-            }, {
-              headers: { Authorization: `Bearer ${accessToken}` },
-            });
+            await axios.post(
+              BASE_URL + "/orders/verify-payment",
+              {
+                razorpay_order_id: order.id,
+                paymentFailed: true,
+              },
+              {
+                headers: { Authorization: `Bearer ${accessToken}` },
+              }
+            );
             toast.error("Payment cancelled or failed");
           },
         },
@@ -131,12 +148,16 @@ const AddressForm = () => {
       const rzp = new window.Razorpay(options);
 
       rzp.on("payment.failed", async function () {
-        await axios.post(BASE_URL + "/orders/verify-payment", {
-          razorpay_order_id: order.id,
-          paymentFailed: true,
-        }, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
+        await axios.post(
+          BASE_URL + "/orders/verify-payment",
+          {
+            razorpay_order_id: order.id,
+            paymentFailed: true,
+          },
+          {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          }
+        );
         toast.error("Payment Failed. Please try again.");
       });
 
@@ -166,14 +187,16 @@ const AddressForm = () => {
               </CardHeader>
               <CardContent className="space-y-4 p-4 sm:p-6">
                 {showForm ? (
-                  // Address Input Form
                   <>
                     <div className="space-y-4">
                       <div>
-                        <Label htmlFor="fullName" className="text-sm">Full Name</Label>
+                        <Label htmlFor="fullName" className="text-sm">
+                          Full Name
+                        </Label>
                         <Input
                           id="fullName"
                           name="fullName"
+                          type="text"
                           required
                           placeholder="John Doe"
                           value={formData.fullName}
@@ -181,20 +204,33 @@ const AddressForm = () => {
                           className="mt-1"
                         />
                       </div>
+
                       <div>
-                        <Label htmlFor="phone" className="text-sm">Phone Number</Label>
+                        <Label htmlFor="phone" className="text-sm">
+                          Phone Number
+                        </Label>
                         <Input
                           id="phone"
                           name="phone"
+                          type="tel"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
                           required
                           placeholder="+91 9876543210"
                           value={formData.phone}
-                          onChange={handleChange}
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/\D/g, "");
+                            if (value.length <= 10)
+                              setFormData({ ...formData, phone: value });
+                          }}
                           className="mt-1"
                         />
                       </div>
+
                       <div>
-                        <Label htmlFor="email" className="text-sm">Email</Label>
+                        <Label htmlFor="email" className="text-sm">
+                          Email
+                        </Label>
                         <Input
                           id="email"
                           name="email"
@@ -206,11 +242,15 @@ const AddressForm = () => {
                           className="mt-1"
                         />
                       </div>
+
                       <div>
-                        <Label htmlFor="address" className="text-sm">Address</Label>
+                        <Label htmlFor="address" className="text-sm">
+                          Address
+                        </Label>
                         <Input
                           id="address"
                           name="address"
+                          type="text"
                           required
                           placeholder="123 Street, Area"
                           value={formData.address}
@@ -218,12 +258,16 @@ const AddressForm = () => {
                           className="mt-1"
                         />
                       </div>
+
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                          <Label htmlFor="city" className="text-sm">City</Label>
+                          <Label htmlFor="city" className="text-sm">
+                            City
+                          </Label>
                           <Input
                             id="city"
                             name="city"
+                            type="text"
                             required
                             placeholder="Kolkata"
                             value={formData.city}
@@ -232,10 +276,13 @@ const AddressForm = () => {
                           />
                         </div>
                         <div>
-                          <Label htmlFor="state" className="text-sm">State</Label>
+                          <Label htmlFor="state" className="text-sm">
+                            State
+                          </Label>
                           <Input
                             id="state"
                             name="state"
+                            type="text"
                             required
                             placeholder="West Bengal"
                             value={formData.state}
@@ -244,24 +291,36 @@ const AddressForm = () => {
                           />
                         </div>
                       </div>
+
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                          <Label htmlFor="zip" className="text-sm">Zip Code</Label>
+                          <Label htmlFor="zip" className="text-sm">
+                            Zip Code
+                          </Label>
                           <Input
                             id="zip"
                             name="zip"
+                            type="number"
+                            inputMode="numeric"
                             required
                             placeholder="700001"
                             value={formData.zip}
-                            onChange={handleChange}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/\D/g, "");
+                              if (value.length <= 6)
+                                setFormData({ ...formData, zip: value });
+                            }}
                             className="mt-1"
                           />
                         </div>
                         <div>
-                          <Label htmlFor="country" className="text-sm">Country</Label>
+                          <Label htmlFor="country" className="text-sm">
+                            Country
+                          </Label>
                           <Input
                             id="country"
                             name="country"
+                            type="text"
                             required
                             placeholder="India"
                             value={formData.country}
@@ -271,14 +330,16 @@ const AddressForm = () => {
                         </div>
                       </div>
                     </div>
+
                     <Button onClick={handleSave} className="w-full mt-6">
                       Save & Continue
                     </Button>
                   </>
                 ) : (
-                  // Saved Addresses List
                   <div className="space-y-4">
-                    <h2 className="text-base sm:text-lg font-semibold lg:hidden">Saved Addresses</h2>
+                    <h2 className="text-base sm:text-lg font-semibold lg:hidden">
+                      Saved Addresses
+                    </h2>
                     {addresses.map((addr, index) => (
                       <div
                         key={index}
@@ -289,14 +350,20 @@ const AddressForm = () => {
                         }`}
                         onClick={() => dispatch(setSelectedAddress(index))}
                       >
-                        <p className="font-medium text-sm sm:text-base pr-16">{addr.fullName}</p>
-                        <p className="text-xs sm:text-sm text-gray-600 mt-1">{addr.phone}</p>
-                        <p className="text-xs sm:text-sm text-gray-600">{addr.email}</p>
+                        <p className="font-medium text-sm sm:text-base pr-16">
+                          {addr.fullName}
+                        </p>
+                        <p className="text-xs sm:text-sm text-gray-600 mt-1">
+                          {addr.phone}
+                        </p>
+                        <p className="text-xs sm:text-sm text-gray-600">
+                          {addr.email}
+                        </p>
                         <p className="text-xs sm:text-sm text-gray-600 mt-2">
-                          {addr.address}, {addr.city}, {addr.state}, {addr.zip}, {addr.country}
+                          {addr.address}, {addr.city}, {addr.state}, {addr.zip},{" "}
+                          {addr.country}
                         </p>
 
-                        {/* Delete Button */}
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -339,15 +406,21 @@ const AddressForm = () => {
               <CardContent className="space-y-4 p-4 sm:p-6">
                 <div className="flex justify-between text-sm sm:text-base">
                   <span>Subtotal ({cart?.items?.length || 0} items)</span>
-                  <span className="font-medium">₹{subtotal?.toLocaleString("en-IN")}</span>
+                  <span className="font-medium">
+                    ₹{subtotal?.toLocaleString("en-IN")}
+                  </span>
                 </div>
                 <div className="flex justify-between text-sm sm:text-base">
                   <span>Shipping</span>
-                  <span className="font-medium">₹{shipping.toLocaleString("en-IN")}</span>
+                  <span className="font-medium">
+                    ₹{shipping.toLocaleString("en-IN")}
+                  </span>
                 </div>
                 <div className="flex justify-between text-sm sm:text-base">
                   <span>Tax (5%)</span>
-                  <span className="font-medium">₹{tax.toLocaleString("en-IN")}</span>
+                  <span className="font-medium">
+                    ₹{tax.toLocaleString("en-IN")}
+                  </span>
                 </div>
                 <Separator />
                 <div className="flex justify-between font-bold text-base sm:text-lg">

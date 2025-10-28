@@ -38,7 +38,6 @@ const AdminSales = () => {
       );
       if (res.data.success) {
         setStats(res.data);
-        console.log(res.data);
       }
     } catch (error) {
       console.error(error);

@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import axios from "axios";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, MapPin } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { BASE_URL } from "../utils/config";
@@ -20,9 +20,7 @@ const MyOrder = () => {
 
       const accessToken = localStorage.getItem("accessToken");
       const res = await axios.get(`${BASE_URL}/orders/myorder?page=${pageNumber}&limit=10`, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
+        headers: { Authorization: `Bearer ${accessToken}` },
       });
 
       if (res.data.success) {
@@ -38,12 +36,10 @@ const MyOrder = () => {
     }
   };
 
-  // 🔹 Initial Fetch
   useEffect(() => {
     getUserOrders(1);
   }, []);
 
-  // 🔹 Load More Orders
   const handleLoadMore = () => {
     if (page < totalPages) {
       const nextPage = page + 1;
@@ -59,49 +55,22 @@ const MyOrder = () => {
         <Button onClick={() => navigate(-1)}>
           <ArrowLeft />
         </Button>
-        <h1 className="text-2xl font-bold">Orders</h1>
+        <h1 className="text-2xl font-bold">My Orders</h1>
       </div>
 
-      {/* Loader */}
+      {/* Loading State */}
       {loading ? (
         <div className="space-y-6 w-full animate-pulse">
           {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="shadow-lg rounded-2xl p-5 border border-gray-200 bg-white"
-            >
-              <div className="flex justify-between mb-4">
-                <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-              </div>
-              <div className="flex justify-between mb-3">
-                <div className="h-3 bg-gray-200 rounded w-1/3"></div>
-                <div className="h-5 bg-gray-200 rounded w-20"></div>
-              </div>
-              <div className="space-y-2">
-                {[1, 2].map((j) => (
-                  <div
-                    key={j}
-                    className="flex justify-between items-center bg-gray-50 p-3 rounded-lg"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-16 h-16 bg-gray-200 rounded-md"></div>
-                      <div className="space-y-2">
-                        <div className="h-3 bg-gray-200 rounded w-32"></div>
-                        <div className="h-2 bg-gray-200 rounded w-20"></div>
-                      </div>
-                    </div>
-                    <div className="h-3 bg-gray-200 rounded w-16"></div>
-                  </div>
-                ))}
-              </div>
+            <div key={i} className="shadow-lg rounded-2xl p-5 border border-gray-200 bg-white">
+              <div className="h-4 bg-gray-200 rounded w-1/2 mb-3"></div>
+              <div className="h-3 bg-gray-200 rounded w-1/3 mb-3"></div>
+              <div className="h-20 bg-gray-200 rounded"></div>
             </div>
           ))}
         </div>
       ) : userOrder.length === 0 ? (
-        <p className="text-gray-800 text-lg sm:text-2xl">
-          No orders found for this user.
-        </p>
+        <p className="text-gray-800 text-lg sm:text-2xl">No orders found.</p>
       ) : (
         <>
           <div className="space-y-6 w-full">
@@ -113,13 +82,12 @@ const MyOrder = () => {
                 {/* Order Header */}
                 <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-4 gap-2">
                   <h2 className="text-lg font-semibold">
-                    Order ID:{" "}
-                    <span className="text-gray-600 break-all">{order._id}</span>
+                    Order ID: <span className="text-gray-600 break-all">{order._id}</span>
                   </h2>
                   <p className="text-sm text-gray-700">
                     <span className="font-medium">Amount:</span>{" "}
                     <span className="font-bold text-pink-600">
-                      ₹{order.amount.toFixed(2)}
+                      ₹{order.amount?.toFixed(2)}
                     </span>
                   </p>
                 </div>
@@ -129,12 +97,9 @@ const MyOrder = () => {
                   <div className="mb-2 sm:mb-0">
                     <p className="text-sm text-gray-700">
                       <span className="font-medium">User:</span>{" "}
-                      {order.user?.firstName || "Unknown"}{" "}
-                      {order.user?.lastName || ""}
+                      {order.user?.firstName || "Unknown"} {order.user?.lastName || ""}
                     </p>
-                    <p className="text-sm text-gray-500">
-                      Email: {order.user?.email || "N/A"}
-                    </p>
+                    <p className="text-sm text-gray-500">Email: {order.user?.email || "N/A"}</p>
                   </div>
                   <span
                     className={`text-white px-3 py-1 rounded-md text-sm font-medium self-start sm:self-center ${
@@ -148,6 +113,27 @@ const MyOrder = () => {
                     {order.status}
                   </span>
                 </div>
+
+                {/* Shipping Address */}
+                {order.shippingAddress && (
+                  <div className="bg-gray-50 p-3 rounded-lg mb-3">
+                    <div className="flex items-start gap-2 text-sm text-gray-700">
+                      <MapPin className="h-4 w-4 mt-1 text-pink-600" />
+                      <div>
+                        <p className="font-medium">{order.shippingAddress.fullName}</p>
+                        <p>{order.shippingAddress.street}</p>
+                        <p>
+                          {order.shippingAddress.city}, {order.shippingAddress.state} -{" "}
+                          {order.shippingAddress.postalCode}
+                        </p>
+                        <p className="text-gray-500">
+                          {order.shippingAddress.country || "India"} |{" "}
+                          {order.shippingAddress.phone}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Product List */}
                 <div>
@@ -198,7 +184,7 @@ const MyOrder = () => {
             ))}
           </div>
 
-          {/* 🔽 Load More Button */}
+          {/* Load More */}
           {page < totalPages && (
             <div className="flex justify-center mt-6">
               <Button

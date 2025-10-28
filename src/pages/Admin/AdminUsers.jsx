@@ -21,7 +21,6 @@ const AdminUsers = () => {
       const res = await axios.get(`${BASE_URL}/user/all-users`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
-      console.log("what is data",res.data);
       if (res.data.success && Array.isArray(res.data.users)) {
         setUsers(res.data.users);
       } else {
@@ -38,8 +37,6 @@ const AdminUsers = () => {
   useEffect(() => {
     getAllUsers();
   }, []);
-
-  console.log(users);
 
   // ✅ Memoized + safe filtering
   const filteredUsers = useMemo(() => {

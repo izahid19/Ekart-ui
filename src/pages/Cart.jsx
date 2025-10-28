@@ -72,9 +72,6 @@ const handleRemove = async (productId) => {
     loadCart();
   }, [dispatch]);
 
-
-  console.log(cart);
-
   return (
     <div className='pt-20 pb-8 bg-gray-50 min-h-screen px-4 sm:px-6 lg:px-8'>
       {
