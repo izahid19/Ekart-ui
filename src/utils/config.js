@@ -1,1 +1,1 @@
-export const BASE_URL = "http://localhost:7878/api";
+export const BASE_URL = "https://ecartbackend-production-5647.up.railway.app/api";
