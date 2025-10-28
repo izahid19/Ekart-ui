@@ -39,8 +39,8 @@ const Login = () => {
   const userId = loggedInUserIdData?.user?.id;
   const accessToken = loggedInUserIdData?.accessToken;
   const [formData, setFormData] = useState({
-    email: "pubgworldcup@gmail.com",
-    password: "Zahid@123",
+    email: "",
+    password: "",
   });
   const dispatch = useDispatch();
 
