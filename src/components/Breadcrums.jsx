@@ -26,8 +26,8 @@ const Breadcrums = ({ product }) => {
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <p className="truncate max-w-[150px] sm:max-w-none">
-              {product.productName}
+            <p className="truncate max-w-[150px] sm:max-w-[350px] overflow-hidden text-ellipsis whitespace-nowrap">
+              {product?.productName || "Product"}
             </p>
           </BreadcrumbItem>
         </BreadcrumbList>
